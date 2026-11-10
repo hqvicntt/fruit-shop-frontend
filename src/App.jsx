@@ -64,6 +64,27 @@ function App() {
       });
   };
 
+  // Handle deleting a fruit item by its ID
+  const handleDelete = (id, fruitName) => {
+    // Show a confirmation dialog to the user before deleting
+    if (window.confirm(`Bạn có chắc chắn muốn xóa loại trái cây "${fruitName}" này không?`)) {
+      
+      // Send a DELETE request to the Laravel backend API
+      axios.delete(`http://fruit-shop-backend.test/api/products/${id}`)
+        .then(response => {
+          if (response.data.success) {
+            alert("Xóa trái cây thành công!");
+            // Refresh the fruit inventory table / Tải lại bảng kho hàng trái cây
+            fetchFruits();
+          }
+        })
+        .catch(error => {
+          console.error("Error deleting fruit:", error);
+          alert("Có lỗi xảy ra khi xóa trái cây.");
+        });
+    }
+  };
+
   return (
     <div className="container my-5">
       <h1 className="text-center text-success fw-bold mb-5">Hệ Thống Quản Lý Trái Cây</h1>
@@ -124,6 +145,7 @@ function App() {
                     <th scope="col">Tên Trái Cây</th>
                     <th scope="col">Giá Bán</th>
                     <th scope="col">Tồn Kho</th>
+                    <th scope="col" className="text-center">Hành động</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -138,6 +160,15 @@ function App() {
                         <span className="badge bg-info text-dark fw-bold">
                           {fruit.stock} kg
                         </span>
+                      </td>
+                      <td className="text-center">
+                        {/* Red Delete Button utilizing Bootstrap 5 classes */}
+                        <button 
+                          className="btn btn-outline-danger btn-sm fw-bold px-3"
+                          onClick={() => handleDelete(fruit.id, fruit.name)}
+                        >
+                          Xóa
+                        </button>
                       </td>
                     </tr>
                   ))}
