@@ -10,6 +10,12 @@ function App() {
   const [price, setPrice] = useState('');
   const [stock, setStock] = useState('');
 
+  // State for editing fruit form (Selected fruit data)
+  const [editingFruit, setEditingFruit] = useState(null);
+  const [editName, setEditName] = useState('');
+  const [editPrice, setEditPrice] = useState('');
+  const [editStock, setEditStock] = useState('');
+
   // Fetch fruit data from Laravel API
   const fetchFruits = () => {
     axios.get('http://fruit-shop-backend.test/api/products/') // API route for fetching products
@@ -83,6 +89,47 @@ function App() {
           alert("Có lỗi xảy ra khi xóa trái cây.");
         });
     }
+  };
+
+  // Set the selected fruit data into editing state and trigger modal
+  const openEditModal = (fruit) => {
+    setEditingFruit(fruit);
+    setEditName(fruit.name);
+    setEditPrice(fruit.price);
+    setEditStock(fruit.stock);
+  };
+
+  // Handle updating fruit data via API
+  const handleUpdate = (e) => {
+    e.preventDefault();
+
+    if (!editName || !editPrice || !editStock) {
+      alert("Vui lòng nhập đầy đủ thông tin chỉnh sửa!");
+      return;
+    }
+
+    const updatedData = {
+      name: editName,
+      price: parseInt(editPrice),
+      stock: parseFloat(editStock)
+    };
+
+    // Send a PUT request to update the product in MySQL
+    axios.put(`http://fruit-shop-backend.test/api/products/${editingFruit.id}`, updatedData)
+      .then(response => {
+        if (response.data.success) {
+          alert("Cập nhật thông tin trái cây thành công!");
+
+          // Reset editing state
+          setEditingFruit(null);
+          // Refresh table data
+          fetchFruits();
+        }
+      })
+      .catch(error => {
+        console.error("Error updating fruit:", error);
+        alert("Có lỗi xảy ra khi cập nhật trái cây.");
+      });
   };
 
   return (
@@ -162,6 +209,15 @@ function App() {
                         </span>
                       </td>
                       <td className="text-center">
+                        {/* Edit Button triggers the Bootstrap Modal popup */}
+                        <button 
+                          className="btn btn-outline-warning btn-sm fw-bold px-3 me-2"
+                          data-bs-toggle="modal"
+                          data-bs-target="#editModal"
+                          onClick={() => openEditModal(fruit)}
+                        >
+                          Sửa
+                        </button>
                         {/* Red Delete Button utilizing Bootstrap 5 classes */}
                         <button 
                           className="btn btn-outline-danger btn-sm fw-bold px-3"
@@ -177,6 +233,57 @@ function App() {
             </div>
           </div>
         </div>
+      </div>
+      {/* Bootstrap 5 Modal for Editing Fruit Information */}
+      <div className="modal fade" id="editModal" tabIndex="-1" aria-labelledby="editModalLabel" aria-hidden="true">
+          <div className="modal-dialog modal-dialog-centered">
+            <div className="modal-content">
+                <div className="modal-header bg-warning text-dark">
+                  <h5 className="modal-title fw-bold" id="editModalLabel">Cập Nhật Thông Tin Trái Cây</h5>
+                  <button type="button" className="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <form onSubmit={handleUpdate}>
+                  <div className="modal-body">
+                    <div className="mb-3">
+                      <label className="form-label fw-semibold">Tên trái cây</label>
+                      <input 
+                        type="text" 
+                        className="form-control" 
+                        value={editName}
+                        onChange={(e) => setEditName(e.target.value)}
+                      />
+                    </div>
+                    <div className="mb-3">
+                      <label className="form-label fw-semibold">Giá bán mới (đ/kg)</label>
+                      <input 
+                        type="number" 
+                        className="form-control" 
+                        value={editPrice}
+                        onChange={(e) => setEditPrice(e.target.value)}
+                      />
+                    </div>
+                    <div className="mb-3">
+                      <label className="form-label fw-semibold">Số lượng kho mới (kg)</label>
+                      <input 
+                        type="number"
+                        step="0.1" 
+                        className="form-control" 
+                        value={editStock}
+                        onChange={(e) => setEditStock(e.target.value)}
+                      />
+                    </div>
+                  </div>
+                  <div className="modal-footer">
+                    <button type="submit" className="btn btn-warning w-100 fw-bold" data-bs-dismiss="modal">
+                      Cập Nhật
+                    </button>
+                    <button type="button" className="btn btn-secondary w-100 fw-bold" data-bs-dismiss="modal">
+                      Đóng
+                    </button>
+                  </div>
+                </form>
+            </div>
+          </div>
       </div>
     </div>
   );
