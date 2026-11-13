@@ -27,6 +27,16 @@ function App() {
   });
   const [orders, setOrders] = useState([]);
 
+  // State to store the selected date for revenue filtering (defaults to today in YYYY-MM-DD format)
+  const [selectedDate, setSelectedDate] = useState(() => {
+    const today = new Date();
+    // Adjust for local timezone (Vietnam GMT+7) so the date doesn't shift backward
+    const offset = today.getTimezoneOffset();
+    const localToday = new Date(today.getTime() - (offset * 60 * 1000));
+    return localToday.toISOString().split('T')[0];
+  });
+
+
   // Fetch fruit data from Laravel API
   const fetchFruits = () => {
     axios.get('http://fruit-shop-backend.test/api/products/') // API route for fetching products
@@ -40,9 +50,13 @@ function App() {
       });
   };
 
-  // Fetch today's revenue summary and orders from Laravel API
-  const fetchRevenueReport = () => {
-    axios.get('http://fruit-shop-backend.test/api/orders')
+  // Fetch revenue summary and orders filtered by a specific date
+  const fetchRevenueReport = (dateToFetch = selectedDate) => {
+    axios.get(`http://fruit-shop-backend.test/api/orders`, {
+      params: {
+        date: dateToFetch
+      }
+    })
       .then(response => {
         if (response.data.success) {
           setRevenueSummary(response.data.summary);
@@ -53,6 +67,7 @@ function App() {
         console.error("Error fetching revenue report:", error);
       });
   };
+
 
   // Run fetchFruits when the component mounts
   useEffect(() => {
@@ -287,6 +302,31 @@ function App() {
       ) : (
         // Today's Revenue Report Dashboard
         <div>
+          {/* Date Filter Bar */}
+          <div className="card shadow-sm p-3 mb-4 bg-light">
+            <div className="row align-items-center">
+              <div className="col-12 col-md-6 mb-2 mb-md-0">
+                <h5 className="mb-0 fw-bold text-success">
+                  Thống Kê Doanh Thu Ngày: <span className="text-dark">{selectedDate.split('-').reverse().join('/')}</span>
+                </h5>
+              </div>
+              <div className="col-12 col-md-6 d-flex justify-content-md-end align-items-center gap-2">
+                <label htmlFor="datePicker" className="fw-semibold mb-0 text-nowrap">Chọn ngày xem:</label>
+                <input
+                  type="date"
+                  id="datePicker"
+                  className="form-control w-auto fw-bold border-success"
+                  value={selectedDate}
+                  onChange={(e) => {
+                    const newDate = e.target.value;
+                    setSelectedDate(newDate);
+                    fetchRevenueReport(newDate); // Fetch data immediately when date changes
+                  }}
+                />
+              </div>
+            </div>
+          </div>
+
           {/* 3 Summary Cards using Bootstrap Grid */}
           <div className="row g-4 mb-4">
             <div className="col-12 col-md-4">
@@ -339,7 +379,7 @@ function App() {
                   {orders.length === 0 ? (
                     <tr>
                       <td colSpan="6" className="text-center text-muted py-4">
-                        Hôm nay chưa có đơn hàng nào được ghi nhận.
+                        Không có đơn hàng nào được ghi nhận trong ngày này.
                       </td>
                     </tr>
                   ) : (
