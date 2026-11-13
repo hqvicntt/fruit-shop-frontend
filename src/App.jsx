@@ -16,6 +16,17 @@ function App() {
   const [editPrice, setEditPrice] = useState('');
   const [editStock, setEditStock] = useState('');
 
+  // State to switch between 'inventory' and 'revenue' tabs
+  const [activeTab, setActiveTab] = useState('inventory');
+
+  // States to store today's revenue summary and order list
+  const [revenueSummary, setRevenueSummary] = useState({
+    total_revenue: 0,
+    total_cash: 0,
+    total_transfer: 0
+  });
+  const [orders, setOrders] = useState([]);
+
   // Fetch fruit data from Laravel API
   const fetchFruits = () => {
     axios.get('http://fruit-shop-backend.test/api/products/') // API route for fetching products
@@ -29,9 +40,24 @@ function App() {
       });
   };
 
+  // Fetch today's revenue summary and orders from Laravel API
+  const fetchRevenueReport = () => {
+    axios.get('http://fruit-shop-backend.test/api/orders')
+      .then(response => {
+        if (response.data.success) {
+          setRevenueSummary(response.data.summary);
+          setOrders(response.data.data);
+        }
+      })
+      .catch(error => {
+        console.error("Error fetching revenue report:", error);
+      });
+  };
+
   // Run fetchFruits when the component mounts
   useEffect(() => {
     fetchFruits();
+    fetchRevenueReport();
   }, []);
 
   // Handle form submission to add new fruit
@@ -134,9 +160,33 @@ function App() {
 
   return (
     <div className="container my-5">
-      <h1 className="text-center text-success fw-bold mb-5">Hệ Thống Quản Lý Trái Cây</h1>
+      <h1 className="text-center text-success fw-bold mb-4">Hệ Thống Quản Lý Trái Cây</h1>
 
-      <div className="row g-5">
+      {/* Navigation Tabs to switch between Inventory and Revenue Report */}
+      <div className="d-flex justify-content-center mb-4">
+        <div className="btn-group shadow-sm" role="group">
+          <button
+            type="button"
+            className={`btn fw-bold px-4 py-2 ${activeTab === 'inventory' ? 'btn-success' : 'btn-outline-success'}`}
+            onClick={() => setActiveTab('inventory')}
+          >
+            Quản Lý Kho Trái Cây
+          </button>
+          <button
+            type="button"
+            className={`btn fw-bold px-4 py-2 ${activeTab === 'revenue' ? 'btn-success' : 'btn-outline-success'}`}
+            onClick={() => {
+              setActiveTab('revenue');
+              fetchRevenueReport(); // Refresh data whenever switching to this tab
+            }}
+          >
+            Báo Cáo Doanh Thu Hôm Nay
+          </button>
+        </div>
+      </div>
+
+      {activeTab === 'inventory' ? (
+        <div className="row g-5">
         {/* Left Column: Add New Fruit Form */}
         <div className="col-12 col-lg-4">
           <div className="card shadow-sm p-4 border-success">
@@ -234,6 +284,90 @@ function App() {
           </div>
         </div>
       </div>
+      ) : (
+        // Today's Revenue Report Dashboard
+        <div>
+          {/* 3 Summary Cards using Bootstrap Grid */}
+          <div className="row g-4 mb-4">
+            <div className="col-12 col-md-4">
+              <div className="card shadow-sm border-danger text-center p-3 h-100">
+                <h6 className="text-muted fw-bold text-uppercase">Tổng Doanh Thu Hôm Nay</h6>
+                <h2 className="text-danger fw-bold my-2">
+                  {revenueSummary.total_revenue.toLocaleString('vi-VN')} đ
+                </h2>
+              </div>
+            </div>
+            <div className="col-12 col-md-4">
+              <div className="card shadow-sm border-success text-center p-3 h-100">
+                <h6 className="text-muted fw-bold text-uppercase">Tiền Mặt Thu Được</h6>
+                <h2 className="text-success fw-bold my-2">
+                  {revenueSummary.total_cash.toLocaleString('vi-VN')} đ
+                </h2>
+              </div>
+            </div>
+            <div className="col-12 col-md-4">
+              <div className="card shadow-sm border-primary text-center p-3 h-100">
+                <h6 className="text-muted fw-bold text-uppercase">Tiền Chuyển Khoản (QR)</h6>
+                <h2 className="text-primary fw-bold my-2">
+                  {revenueSummary.total_transfer.toLocaleString('vi-VN')} đ
+                </h2>
+              </div>
+            </div>
+          </div>
+
+          {/* Detailed Table of Today's Orders */}
+          <div className="card shadow-sm p-4">
+            <div className="d-flex justify-content-between align-items-center mb-3">
+              <h4 className="text-dark fw-bold mb-0">Lịch Sử Giao Dịch Trong Ngày</h4>
+              <button className="btn btn-outline-secondary btn-sm fw-bold" onClick={fetchRevenueReport}>
+                Làm mới số liệu
+              </button>
+            </div>
+            <div className="table-responsive">
+              <table className="table table-hover align-middle">
+                <thead className="table-success">
+                  <tr>
+                    <th scope="col">Mã Đơn</th>
+                    <th scope="col">Chi Tiết Trái Cây Đã Bán</th>
+                    <th scope="col">Tiền Mặt</th>
+                    <th scope="col">Chuyển Khoản</th>
+                    <th scope="col">Tổng Hóa Đơn</th>
+                    <th scope="col">Thời Gian</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {orders.length === 0 ? (
+                    <tr>
+                      <td colSpan="6" className="text-center text-muted py-4">
+                        Hôm nay chưa có đơn hàng nào được ghi nhận.
+                      </td>
+                    </tr>
+                  ) : (
+                    orders.map((order) => (
+                      <tr key={order.id}>
+                        <td className="fw-bold">#{order.id}</td>
+                        <td>{order.items_summary}</td>
+                        <td className="text-success fw-semibold">
+                          {order.cash_amount.toLocaleString('vi-VN')} đ
+                        </td>
+                        <td className="text-primary fw-semibold">
+                          {order.transfer_amount.toLocaleString('vi-VN')} đ
+                        </td>
+                        <td className="text-danger fw-bold">
+                          {order.total_amount.toLocaleString('vi-VN')} đ
+                        </td>
+                        <td className="text-muted small">
+                          {new Date(order.created_at).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      )}
       {/* Bootstrap 5 Modal for Editing Fruit Information */}
       <div className="modal fade" id="editModal" tabIndex="-1" aria-labelledby="editModalLabel" aria-hidden="true">
           <div className="modal-dialog modal-dialog-centered">
