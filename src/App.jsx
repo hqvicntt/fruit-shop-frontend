@@ -55,7 +55,7 @@ function App() {
   // Handle Admin login submission
   const handleLogin = (e) => {
     e.preventDefault();
-    axios.post('http://fruit-shop-backend.test/api/login', { email, password })
+    axios.post(`${API_BASE_URL}/api/login`, { email, password })
       .then(response => {
         if (response.data.success) {
           const receivedToken = response.data.token;
@@ -73,7 +73,7 @@ function App() {
   // Handle Admin logout
   // Xử lý đăng xuất và xóa mã khóa
   const handleLogout = () => {
-    axios.post('http://fruit-shop-backend.test/api/logout', {}, authHeaders)
+    axios.post(`${API_BASE_URL}/api/logout`, {}, authHeaders)
       .finally(() => {
         localStorage.removeItem('admin_token');
         setToken('');
@@ -82,7 +82,7 @@ function App() {
 
   // Fetch fruit data from Laravel API
   const fetchFruits = () => {
-    axios.get('http://fruit-shop-backend.test/api/products/') // API route for fetching products
+    axios.get(`${API_BASE_URL}/api/products/`) // API route for fetching products
       .then(response => {
         if (response.data.success) {
           setFruits(response.data.data);
@@ -96,7 +96,7 @@ function App() {
     const fetchRevenueReport = (dateToFetch = selectedDate) => {
     if (!token) return; // Do not fetch if not logged in
 
-    axios.get(`http://fruit-shop-backend.test/api/orders`, {
+    axios.get(`${API_BASE_URL}/api/orders`, {
       params: { date: dateToFetch },
       headers: {
         Authorization: `Bearer ${token}`,
@@ -141,7 +141,7 @@ function App() {
     };
 
     // Send a POST request to the Laravel backend
-    axios.post('http://fruit-shop-backend.test/api/products/', newFruit)
+    axios.post(`${API_BASE_URL}/api/products/`, newFruit)
       .then(response => {
         if (response.data.success) {
           alert("Thêm trái cây mới thành công!");
@@ -165,7 +165,7 @@ function App() {
     if (window.confirm(`Bạn có chắc chắn muốn xóa loại trái cây "${fruitName}" này không?`)) {
       
       // Send a DELETE request to the Laravel backend API
-      axios.delete(`http://fruit-shop-backend.test/api/products/${id}`)
+      axios.delete(`${API_BASE_URL}/api/products/${id}`)
         .then(response => {
           if (response.data.success) {
             alert("Xóa trái cây thành công!");
@@ -204,7 +204,7 @@ function App() {
     };
 
     // Send a PUT request to update the product in MySQL
-    axios.put(`http://fruit-shop-backend.test/api/products/${editingFruit.id}`, updatedData)
+    axios.put(`${API_BASE_URL}/api/products/${editingFruit.id}`, updatedData)
       .then(response => {
         if (response.data.success) {
           alert("Cập nhật thông tin trái cây thành công!");
