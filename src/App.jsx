@@ -4,6 +4,9 @@ import axios from 'axios';
 // Read the API base URL from Vite environment variables
 const API_BASE_URL = import.meta.env.VITE_API_URL;
 
+// Bypass Ngrok's free tier browser warning page for all Axios requests
+axios.defaults.headers.common['ngrok-skip-browser-warning'] = 'true';
+
 function App() {
   // State for storing the list of fruits
   const [fruits, setFruits] = useState([]);
