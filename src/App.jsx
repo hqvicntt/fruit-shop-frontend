@@ -1,6 +1,9 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
 
+// Read the API base URL from Vite environment variables
+const API_BASE_URL = import.meta.env.VITE_API_URL;
+
 function App() {
   // State for storing the list of fruits
   const [fruits, setFruits] = useState([]);
@@ -27,6 +30,11 @@ function App() {
   });
   const [orders, setOrders] = useState([]);
 
+  // Authentication states to store token and login form inputs
+  const [token, setToken] = useState(localStorage.getItem('admin_token') || '');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+
   // State to store the selected date for revenue filtering (defaults to today in YYYY-MM-DD format)
   const [selectedDate, setSelectedDate] = useState(() => {
     const today = new Date();
@@ -36,6 +44,41 @@ function App() {
     return localToday.toISOString().split('T')[0];
   });
 
+  // Configure Axios to automatically send the Bearer Token in headers
+  const authHeaders = {
+    headers: {
+      Authorization: `Bearer ${token}`,
+      Accept: 'application/json',
+    }
+  };
+
+  // Handle Admin login submission
+  const handleLogin = (e) => {
+    e.preventDefault();
+    axios.post('http://fruit-shop-backend.test/api/login', { email, password })
+      .then(response => {
+        if (response.data.success) {
+          const receivedToken = response.data.token;
+          localStorage.setItem('admin_token', receivedToken); // Save token to browser / Lưu mã vào trình duyệt
+          setToken(receivedToken);
+          setEmail('');
+          setPassword('');
+        }
+      })
+      .catch(error => {
+        alert(error.response?.data?.message || 'Đăng nhập thất bại! Vui lòng kiểm tra lại.');
+      });
+  };
+
+  // Handle Admin logout
+  // Xử lý đăng xuất và xóa mã khóa
+  const handleLogout = () => {
+    axios.post('http://fruit-shop-backend.test/api/logout', {}, authHeaders)
+      .finally(() => {
+        localStorage.removeItem('admin_token');
+        setToken('');
+      });
+  };
 
   // Fetch fruit data from Laravel API
   const fetchFruits = () => {
@@ -50,11 +93,14 @@ function App() {
       });
   };
 
-  // Fetch revenue summary and orders filtered by a specific date
-  const fetchRevenueReport = (dateToFetch = selectedDate) => {
+    const fetchRevenueReport = (dateToFetch = selectedDate) => {
+    if (!token) return; // Do not fetch if not logged in
+
     axios.get(`http://fruit-shop-backend.test/api/orders`, {
-      params: {
-        date: dateToFetch
+      params: { date: dateToFetch },
+      headers: {
+        Authorization: `Bearer ${token}`,
+        Accept: 'application/json',
       }
     })
       .then(response => {
@@ -64,16 +110,18 @@ function App() {
         }
       })
       .catch(error => {
-        console.error("Error fetching revenue report:", error);
+        // If token is invalid or expired (401), force logout
+        if (error.response && error.response.status === 401) {
+          localStorage.removeItem('admin_token');
+          setToken('');
+        }
       });
   };
 
-
   // Run fetchFruits when the component mounts
   useEffect(() => {
-    fetchFruits();
-    fetchRevenueReport();
-  }, []);
+    if (token) { fetchFruits(); fetchRevenueReport(); }
+  }, [token]);
 
   // Handle form submission to add new fruit
   const handleSubmit = (e) => {
@@ -173,8 +221,52 @@ function App() {
       });
   };
 
+  // If no token exists, render the Login Screen and block access to Admin Dashboard
+  if (!token) {
+    return (
+      <div className="container d-flex justify-content-center align-items-center vh-100">
+        <div className="card shadow p-4 border-success" style={{ maxWidth: '400px', width: '100%' }}>
+          <h3 className="text-center text-success fw-bold mb-4">Đăng Nhập Quản Trị</h3>
+          <form onSubmit={handleLogin}>
+            <div className="mb-3">
+              <label className="form-label fw-semibold">Email quản trị</label>
+              <input
+                type="email"
+                className="form-control"
+                placeholder="admin@traicay.vn"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+              />
+            </div>
+            <div className="mb-3">
+              <label className="form-label fw-semibold">Mật khẩu</label>
+              <input
+                type="password"
+                className="form-control"
+                placeholder="Nhập mật khẩu..."
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+              />
+            </div>
+            <button type="submit" className="btn btn-success w-100 fw-bold">
+              Đăng Nhập
+            </button>
+          </form>
+        </div>
+      </div>
+    );
+  }
+
+
   return (
     <div className="container my-5">
+      <div className="d-flex justify-content-end mb-2">
+        <button className="btn btn-outline-danger btn-sm fw-bold" onClick={handleLogout}>
+          Đăng xuất
+        </button>
+      </div>
       <h1 className="text-center text-success fw-bold mb-4">Hệ Thống Quản Lý Trái Cây</h1>
 
       {/* Navigation Tabs to switch between Inventory and Revenue Report */}
